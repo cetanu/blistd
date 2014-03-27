@@ -39,16 +39,16 @@ function log($string, $mode)
 $ipaddress = "127.0.0.1"  # We are checking this address
 
 # Email Settings
-$email_server = "smtp.email.com"
+$email_server   = "smtp.email.com"
 $email_username = "username"
 $email_password = "password"
-$email_from = "from@email.com"
-$email_to = "to@email.com"
-$email_subject = "$($env:computername) detected on $($BL) DNS Blacklist"
-$email_body = "Please be advised that $($env:computername)" + "`n" + `
-              "has detected itself on a DNS Blacklist: $($BL)" + "`n" + `
-              "Sincerely," + "`n" + `
-              "Your mate."
+$email_from     = "from@email.com"
+$email_to       = "to@email.com"
+$email_subject  = "$($env:computername) detected on $($BL) DNS Blacklist"
+$email_body     = "Please be advised that $($env:computername)" + "`n" + `
+                  "has detected itself on a DNS Blacklist: $($BL)" + "`n" + `
+                  "Sincerely," + "`n" + `
+                  "Your mate."
 
 
 # ----- Everything past this point 'should' not be modified. -----
