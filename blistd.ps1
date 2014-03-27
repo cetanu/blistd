@@ -61,11 +61,11 @@ $regex = "\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\." + `
 
 switch -regex ($ipaddress)
 {
-	$regex          { $ipaddress -match $regex | Out-Null }
 	"127\.0\.0\.1"  { log "Your IP address is set to the local loopback address." "warning" }
 	"^(192|172|10)" { log "A valid, public IP address is required for this script to work." "error" }
 	default         { log "Invalid IP specified." "error" }
 }
+$ipaddress -match $regex | Out-Null
 $reverse_ip = "$($Matches[4]).$($Matches[3]).$($Matches[2]).$($Matches[1])"  # Reverse each capture group
 
 # Blacklists
