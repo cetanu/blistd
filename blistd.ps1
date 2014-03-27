@@ -1,14 +1,14 @@
 function email_alert($blacklist)
 {	
 	# Message Object Creation
-	$message = new-object System.Net.Mail.MailMessage
-	$message.To.Add($email_to)
+	$message         = New-Object System.Net.Mail.MailMessage
 	$message.From    = $email_from
 	$message.Subject = $email_subject
 	$message.body    = $email_body
+	$message.To.Add($email_to)
 	
 	# Server Connection Object Creation
-	$smtp = new-object Net.Mail.SmtpClient($email_server)
+	$smtp = New-Object Net.Mail.SmtpClient($email_server)
 	$smtp.Credentials = New-Object System.Net.NetworkCredential($email_username, $email_password)
 	$smtp.Send($message)
 }
@@ -17,7 +17,7 @@ function log($string, $mode)
 	(date -format "HH:mm:sstt, dd MMM yyyy | ") + $string | Out-file ".\blistd.log" -a -en ASCII
 	switch ($mode)
 	{
-		default   { Write-Output  $string }
+		default   { Write-Output   $string }
 		"warning" { Write-Warning ($string + " Please check your configuration.");  }
 		"error"   { Write-Error   ($string + " Please check your configuration."); exit }
 		"network" { Write-Error   ($string + " Please check your internet connection."); exit }
@@ -36,7 +36,7 @@ function log($string, $mode)
 #
 
 # IP Address Settings
-$ipaddress      = "127.0.0.1"  # We are checking this address
+$ipaddress      = "59.167.128.100"  # We are checking this address
 
 # Email Settings
 $email_server   = "smtp.email.com"
@@ -61,9 +61,10 @@ $regex = "\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\." + `
 
 switch -regex ($ipaddress)
 {
-	"127\.0\.0\.1"  { log "Your IP address is set to the local loopback address." "warning" }
 	"^(192|172|10)" { log "A valid, public IP address is required for this script to work." "error" }
+	"127\.0\.0\.1"  { log "Your IP address is set to the local loopback address." "warning" }
 	default         { log "Invalid IP specified." "error" }
+	$regex          { continue }
 }
 $ipaddress -match $regex | Out-Null
 $reverse_ip = "$($Matches[4]).$($Matches[3]).$($Matches[2]).$($Matches[1])"  # Reverse each capture group
@@ -88,10 +89,10 @@ While (1)
 {
 	ForEach ($blacklist in $DNSBL)
 	{
-		$blcheck = Start-Job {cmd /c nslookup -type=txt "$($reverse_ip).$($blacklist)"}
-		Wait-Job $blcheck | Out-Null
+		$check = Start-Job {cmd /c nslookup -type=txt "$($reverse_ip).$($blacklist)"}
+		Wait-Job $check | Out-Null
 		
-		If ((Receive-Job $blcheck) -NotMatch "$($reverse_ip).$($blacklist)")
+		If ((Receive-Job $check) -NotMatch "$($reverse_ip).$($blacklist)")
 		{
 			log "OK -`t$($reverse_ip).$($blacklist)"
 		}
@@ -108,5 +109,7 @@ While (1)
 			}
 		}
 	}
-	sleep (Random -min 60 -max 14000)  # delay to avoid looking like a bot
+	$delay = (Random -min 60 -max 14000)
+	log "Sleeping for $([int]($delay/60)) minutes"
+	sleep $delay  # random delay to avoid looking like a bot
 }
