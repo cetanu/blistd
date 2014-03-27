@@ -1,13 +1,9 @@
-#
 # IP ADDRESS TO CHECK
-#
 
-$ip = "127.0.0.1" # This should be a public address
+$ip = "127.0.0.1"  # This should be a public address
 
 
-#
 # EMAIL SETTINGS
-#
 
 # Server details
 $smtpserver = "smtp.email.com"
@@ -16,41 +12,37 @@ $Password = "password"
 
 # Address details
 $email_from = "from@email.com"
-$toaddress = "to@email.com"
+$email_to = "to@email.com"
 
 # Message details
+$email_subject = "$($env:computername) detected on $($BL) DNS Blacklist"
 $email_body = "
 Please be advised that $($env:computername)
 has detected itself on a DNS Blacklist: $($BL)
 Sincerely,
 Your mate
 "
-$email_subject = "$($env:computername) detected on $($BL) DNS Blacklist"
 
 
-#
 # OBTAINING REVERSE IP
-#
 
 # Check IP address to ensure it is public
-if ($ip -eq $null -or $ip -match "^(192|172|10)") {
+if ($ip -eq $null -or $ip -match "^(192|172|10)")
+{
 	Write-Error "A valid, public IP address is required for this script to work. Please check your configuration."
 	exit
 }
 
-# Match the ip with regex
 $ip -match "\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b" | Out-Null
 
-# Reverse each capture group
-$reverse_ip = "$($Matches[4]).$($Matches[3]).$($Matches[2]).$($Matches[1])"
+$reverse_ip = "$($Matches[4]).$($Matches[3]).$($Matches[2]).$($Matches[1])"  # Reverse each capture group
 
 
-#
 # FUNCTIONS
-#
 
 # Emailing
-function alert($BL) {	
+function alert($BL)
+{	
 	# Message Object Creation
 	$message = new-object System.Net.Mail.MailMessage
 	$message.From = $email_from
@@ -65,27 +57,23 @@ function alert($BL) {
 }
 
 # Logging
-function log ($string) {
+function log ($string)
+{
 	(date -format "HH:mm:sstt, dd MMM yyyy | ") + $string | Out-file ".\blistd.log" -a -en ASCII
 	Write-Output $string
 }
 
-#
+
 # BLACKLISTS
-#
 
-# Automatically download a list of DNSBLs from Gist. Update the list if there is a missing blacklist.
-(Invoke-WebRequest https://gist.github.com/cetanu/9697771).content | ? {$_ -match '(?<=View Raw" href=")[^"]*'}
+(Invoke-WebRequest 'https://gist.github.com/cetanu/9697771').content | ? {$_ -match '(?<=View Raw" href=")[^"]*'}
 $url = $Matches[0]
-$DNSBL = (Invoke-WebRequest $url).content
+$DNSBL = (Invoke-WebRequest $url).content  # Automatically download a list of DNSBLs from Gist
 
 
-#
 # MAIN
-#
 
-# Ignore errors, because we will get lots of nslookup failures (unless we are blacklisted :P)
-$ErrorActionPreference = "SilentlyContinue"
+$ErrorActionPreference = "SilentlyContinue"  # Ignore errors, we are supposed to get nslookup failures
 
 While (1)
 {
@@ -104,6 +92,5 @@ While (1)
 			alert($BL)
 		}
 	}
-	# Wait between 1 minute to 4 hours before next check, so that we don't look too robotic
-	Sleep (Random -min 60 -max 14000)
+	Sleep (Random -min 60 -max 14000)  # delay to avoid looking like a bot
 }
