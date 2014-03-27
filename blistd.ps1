@@ -1,12 +1,41 @@
+function email_alert($BL)
+{	
+	# Message Object Creation
+	$message = new-object System.Net.Mail.MailMessage
+	$message.To.Add($toaddress)
+	$message.From    = $email_from
+	$message.Subject = $email_subject
+	$message.body    = $email_body
+	
+	# Server Connection Object Creation
+	$smtp = new-object Net.Mail.SmtpClient($email_server)
+	$smtp.Credentials = New-Object System.Net.NetworkCredential($email_username, $email_password)
+	$smtp.Send($message)
+}
+function log($string, $mode)
+{
+	(date -format "HH:mm:sstt, dd MMM yyyy | ") + $string | Out-file ".\blistd.log" -a -en ASCII
+	switch ($mode)
+	{
+		default   { Write-Output  $string       }
+		"error"   { Write-Error   $string; exit }
+		"warning" { Write-Warning $string       }
+	}
+}
+
+
+#
+#   ______   __       __   ______   ______  _____    
+#  /\  == \ /\ \     /\ \ /\  ___\ /\__  _\/\  __-.  
+#  \ \  __< \ \ \____\ \ \\ \___  \\/_/\ \/\ \ \/\ \ 
+#   \ \_____\\ \_____\\ \_\\/\_____\  \ \_\ \ \____- 
+#    \/_____/ \/_____/ \/_/ \/_____/   \/_/  \/____/ 
+#                                                  
+#          https://github.com/cetanu/blistd
+#
+
 # IP Address Settings
 $ipaddress = "127.0.0.1"  # We are checking this address
-if ($ipaddress -eq $null -or $ipaddress -match "^(192|172|10)")
-{
-	Write-Error "A valid, public IP address is required for this script to work. Please check your configuration."
-	exit
-}
-$ipaddress -match "\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b" | Out-Null
-$reverse_ip = "$($Matches[4]).$($Matches[3]).$($Matches[2]).$($Matches[1])"  # Reverse each capture group
 
 # Email Settings
 $email_server = "smtp.email.com"
@@ -15,40 +44,43 @@ $email_password = "password"
 $email_from = "from@email.com"
 $email_to = "to@email.com"
 $email_subject = "$($env:computername) detected on $($BL) DNS Blacklist"
-$email_body = "
-Please be advised that $($env:computername)
-has detected itself on a DNS Blacklist: $($BL)
-Sincerely,
-Your mate
-"
+$email_body = "Please be advised that $($env:computername)" + "`n" + `
+              "has detected itself on a DNS Blacklist: $($BL)" + "`n" + `
+              "Sincerely," + "`n" + `
+              "Your mate."
 
-# Functions
-function email_alert($BL)
-{	
-	# Message Object Creation
-	$message = new-object System.Net.Mail.MailMessage
-	$message.From = $email_from
-	$message.To.Add($toaddress)
-	$message.Subject = $email_subject
-	$message.body = $email_body
-	
-	# Server Connection Object Creation
-	$smtp = new-object Net.Mail.SmtpClient($email_server)
-	$smtp.Credentials = New-Object System.Net.NetworkCredential($email_username, $email_password)
-	$smtp.Send($message)
-}
-function log($string)
+
+# ----- Everything past this point 'should' not be modified. -----
+
+# Check IP address for validity
+if ($ipaddress -eq $null -or $ipaddress -match "^(192|172|10)")
 {
-	(date -format "HH:mm:sstt, dd MMM yyyy | ") + $string | Out-file ".\blistd.log" -a -en ASCII
-	Write-Output $string
+	log "A valid, public IP address is required for this script to work. Please check your configuration." "error"
 }
+if ($ipaddress -eq "127.0.0.1")
+{
+	log "Your IP address is set to the local loopback address. Please check your configuration.`n" "warning"
+}
+$regex = "\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\." + `
+           "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\." + `
+           "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\." + `
+           "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b"
+$ipaddress -match $regex | Out-Null
+$reverse_ip = "$($Matches[4]).$($Matches[3]).$($Matches[2]).$($Matches[1])"  # Reverse each capture group
 
 # Blacklists
 Write-Output "Updating DNSBLs..."
-(Invoke-WebRequest 'https://gist.github.com/cetanu/9697771').content | ? {$_ -match '(?<=View Raw" href=")[^"]*'} | Out-Null
-$URL = $Matches[0]
-$DNSBL = ((Invoke-WebRequest $URL).content -split "\n")  # Automatically download a list of DNSBLs from Gist
-Write-Output "Done.`n"
+Try
+{
+	(Invoke-WebRequest 'https://gist.github.com/cetanu/9697771').content | ?{$_ -match '(?<=View Raw" href=")[^"]*'} | Out-Null
+	$URL = $Matches[0]
+	$DNSBL = ((Invoke-WebRequest $URL).content -split "\n")  # Automatically download a list of DNSBLs from Gist
+	Write-Output "Done.`n"
+}
+Catch
+{
+	log "Failed to retrieve DNSBLs. Please check your internet connection." "error"
+}
 
 # Begin checking
 $ErrorActionPreference = "SilentlyContinue"  # Ignore errors, we are supposed to get nslookup failures
@@ -65,9 +97,16 @@ While (1)
 		}
 		Else
 		{
-			log "LISTED-`t$($reverse_ip).$($BL)"
-			email_alert($BL)
+			log "BLACKLISTED-`t$($reverse_ip).$($BL)"
+			Try
+			{
+				email_alert($BL)
+			}
+			Catch
+			{
+				log "Failed to send email. Please check your configuration." "error"
+			}
 		}
 	}
-	Sleep (Random -min 60 -max 14000)  # delay to avoid looking like a bot
+	sleep (Random -min 60 -max 14000)  # delay to avoid looking like a bot
 }
