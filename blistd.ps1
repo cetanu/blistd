@@ -17,9 +17,10 @@ function log($string, $mode)
 	(date -format "HH:mm:sstt, dd MMM yyyy | ") + $string | Out-file ".\blistd.log" -a -en ASCII
 	switch ($mode)
 	{
-		default   { Write-Output  $string       }
-		"error"   { Write-Error   $string; exit }
-		"warning" { Write-Warning $string       }
+		default   { Write-Output  $string }
+		"warning" { Write-Warning ($string + " Please check your configuration.");  }
+		"error"   { Write-Error   ($string + " Please check your configuration."); exit }
+		"network" { Write-Error   ($string + " Please check your internet connection."); exit }
 	}
 }
 
@@ -53,33 +54,32 @@ $email_body = "Please be advised that $($env:computername)" + "`n" + `
 # ----- Everything past this point 'should' not be modified. -----
 
 # Check IP address for validity
-if ($ipaddress -eq $null -or $ipaddress -match "^(192|172|10)")
-{
-	log "A valid, public IP address is required for this script to work. Please check your configuration." "error"
-}
-if ($ipaddress -eq "127.0.0.1")
-{
-	log "Your IP address is set to the local loopback address. Please check your configuration.`n" "warning"
-}
 $regex = "\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\." + `
            "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\." + `
            "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\." + `
            "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b"
-$ipaddress -match $regex | Out-Null
+
+switch -regex ($ipaddress)
+{
+	$regex          { $ipaddress -match $regex | Out-Null }
+	"127\.0\.0\.1"  { log "Your IP address is set to the local loopback address." "warning" }
+	"^(192|172|10)" { log "A valid, public IP address is required for this script to work." "error" }
+	default         { log "Invalid IP specified." "error" }
+}
 $reverse_ip = "$($Matches[4]).$($Matches[3]).$($Matches[2]).$($Matches[1])"  # Reverse each capture group
 
 # Blacklists
-Write-Output "Updating DNSBLs..."
+log "Updating DNSBLs..."
 Try
 {
 	(Invoke-WebRequest 'https://gist.github.com/cetanu/9697771').content | ?{$_ -match '(?<=View Raw" href=")[^"]*'} | Out-Null
 	$URL = $Matches[0]
 	$DNSBL = ((Invoke-WebRequest $URL).content -split "\n")  # Automatically download a list of DNSBLs from Gist
-	Write-Output "Done.`n"
+	log "Done.`n"
 }
 Catch
 {
-	log "Failed to retrieve DNSBLs. Please check your internet connection." "error"
+	log "Failed to retrieve DNSBLs." "network"
 }
 
 # Begin checking
@@ -104,7 +104,7 @@ While (1)
 			}
 			Catch
 			{
-				log "Failed to send email. Please check your configuration." "error"
+				log "Failed to send email." "error"
 			}
 		}
 	}
