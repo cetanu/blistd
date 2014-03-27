@@ -1,8 +1,8 @@
-function email_alert($BL)
+function email_alert($blacklist)
 {	
 	# Message Object Creation
 	$message = new-object System.Net.Mail.MailMessage
-	$message.To.Add($toaddress)
+	$message.To.Add($email_to)
 	$message.From    = $email_from
 	$message.Subject = $email_subject
 	$message.body    = $email_body
@@ -36,7 +36,7 @@ function log($string, $mode)
 #
 
 # IP Address Settings
-$ipaddress = "127.0.0.1"  # We are checking this address
+$ipaddress      = "127.0.0.1"  # We are checking this address
 
 # Email Settings
 $email_server   = "smtp.email.com"
@@ -44,9 +44,9 @@ $email_username = "username"
 $email_password = "password"
 $email_from     = "from@email.com"
 $email_to       = "to@email.com"
-$email_subject  = "$($env:computername) detected on $($BL) DNS Blacklist"
+$email_subject  = "$($env:computername) detected on $($blacklist) DNS Blacklist"
 $email_body     = "Please be advised that $($env:computername)" + "`n" + `
-                  "has detected itself on a DNS Blacklist: $($BL)" + "`n" + `
+                  "has detected itself on a DNS Blacklist: $($blacklist)" + "`n" + `
                   "Sincerely," + "`n" + `
                   "Your mate."
 
@@ -86,21 +86,21 @@ Catch
 $ErrorActionPreference = "SilentlyContinue"  # Ignore errors, we are supposed to get nslookup failures
 While (1)
 {
-	ForEach ($BL in $DNSBL)
+	ForEach ($blacklist in $DNSBL)
 	{
-		$blcheck = Start-Job {cmd /c nslookup -type=txt "$($reverse_ip).$($BL)"}
+		$blcheck = Start-Job {cmd /c nslookup -type=txt "$($reverse_ip).$($blacklist)"}
 		Wait-Job $blcheck | Out-Null
 		
-		If ((Receive-Job $blcheck) -NotMatch "$($reverse_ip).$($BL)")
+		If ((Receive-Job $blcheck) -NotMatch "$($reverse_ip).$($blacklist)")
 		{
-			log "OK -`t$($reverse_ip).$($BL)"
+			log "OK -`t$($reverse_ip).$($blacklist)"
 		}
 		Else
 		{
-			log "BLACKLISTED-`t$($reverse_ip).$($BL)"
+			log "BLACKLISTED-`t$($reverse_ip).$($blacklist)"
 			Try
 			{
-				email_alert($BL)
+				email_alert($blacklist)
 			}
 			Catch
 			{
