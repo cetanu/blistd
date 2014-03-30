@@ -12,11 +12,9 @@
 $ipaddress      = "59.167.128.100"  # We are checking this address
 
 # Email Settings
-$email_server   = "smtp.email.com"
-$email_username = "username"
-$email_password = "password"
-$email_from     = "from@email.com"
-$email_to       = "to@email.com"
+$email_server   = ""
+$email_from     = ""
+$email_to       = ""
 $email_subject  = "$($env:computername) detected on $($blacklist) DNS Blacklist"
 $email_body     = "Please be advised that $($env:computername)" + "`n" + `
                   "has detected itself on a DNS Blacklist: $($blacklist)" + "`n" + `
@@ -24,9 +22,38 @@ $email_body     = "Please be advised that $($env:computername)" + "`n" + `
                   "Your mate."
 
 
+
 # ----- Everything past this point 'should' not be modified. -----
 
 
+
+function log($string, $mode)
+{
+	(date -format "HH:mm:sstt, dd MMM yyyy | ") + $string | Out-file ".\blistd.log" -a -en ASCII
+	switch ($mode)
+	{
+		default   { Write-Output   $string }
+		"warning" { Write-Warning ($string + " Please check your configuration.");  }
+		"error"   { Write-Error   ($string + " Please check your configuration."); exit }
+		"network" { Write-Error   ($string + " Please check your internet connection."); exit }
+	}
+}
+
+# Email Credentials
+
+$email_user = # This will be automatically filled when you run the script.
+$email_pass = # This will be automatically filled when you run the script.
+
+if ($email_pass -eq $null -or $email_user -eq $null)
+{
+	Write-Output "No credentials found, asking..."
+	$credentials = credential -message "Please enter your email username and password"
+	if ($credentials -eq $null) {log "No credentials provided." "error"}
+	(gc ".\blistd.ps1") `
+		-replace "^.email_user = .*?$",('$email_user = ' + "'" + $credentials.UserName + "'") `
+		-replace "^.email_pass = .*?$",('$email_pass = ' + "'" + ($credentials.Password | ConvertFrom-SecureString) + "'" + " | ConvertTo-SecureString") |
+		sc ".\blistd.ps1"
+}
 
 function email_alert($blacklist)
 {	
@@ -38,19 +65,24 @@ function email_alert($blacklist)
 	$message.To.Add($email_to)
 	
 	# Server Connection Object Creation
-	$smtp = New-Object Net.Mail.SmtpClient($email_server)
-	$smtp.Credentials = New-Object System.Net.NetworkCredential($email_username, $email_password)
-	$smtp.Send($message)
-}
-function log($string, $mode)
-{
-	(date -format "HH:mm:sstt, dd MMM yyyy | ") + $string | Out-file ".\blistd.log" -a -en ASCII
-	switch ($mode)
+	Try
 	{
-		default   { Write-Output   $string }
-		"warning" { Write-Warning ($string + " Please check your configuration.");  }
-		"error"   { Write-Error   ($string + " Please check your configuration."); exit }
-		"network" { Write-Error   ($string + " Please check your internet connection."); exit }
+		$smtp = New-Object Net.Mail.SmtpClient($email_server, 587)
+		$smtp.EnableSSL = $true
+	}
+	Catch
+	{
+		$smtp = New-Object Net.Mail.SmtpClient($email_server)
+	}
+	$smtp.Credentials = New-Object System.Net.NetworkCredential($email_user,$email_pass)
+	Try
+	{
+		$smtp.Send($message)
+		log "Email alert sent to: $($email_to)"
+	}
+	Catch
+	{
+		log "Failed to send email. $($error[0].Exception)" "error"
 	}
 }
 
@@ -84,6 +116,9 @@ Catch
 	log "Failed to retrieve DNSBLs." "network"
 }
 
+
+
+
 # Begin checking
 $ErrorActionPreference = "SilentlyContinue"  # Ignore errors, we are supposed to get nslookup failures
 While (1)
@@ -100,14 +135,7 @@ While (1)
 		Else
 		{
 			log "BLACKLISTED-`t$($reverse_ip).$($blacklist)"
-			Try
-			{
-				email_alert($blacklist)
-			}
-			Catch
-			{
-				log "Failed to send email." "error"
-			}
+			email_alert($blacklist)
 		}
 	}
 	$delay = (Random -min 60 -max 14000)
