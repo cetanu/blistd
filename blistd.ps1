@@ -46,7 +46,6 @@ $email_pass = # This will be automatically filled when you run the script.
 
 if ($email_pass -eq $null -or $email_user -eq $null)
 {
-	Write-Output "No credentials found, asking..."
 	$credentials = credential -message "Please enter your email username and password"
 	if ($credentials -eq $null) {log "No credentials provided." "error"}
 	(gc ".\blistd.ps1") `
