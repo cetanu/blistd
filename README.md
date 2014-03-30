@@ -9,14 +9,15 @@ This is a Powershell script which checks each DNS Blacklist to see if your IP ha
 ## Features
 
 - Randomized wait between executions so that we don't look like robots to the DNSBL hosts
-- Email alerting via SMTP
+- Email alerting via SMTP (password is stored securely)
+- Automatically downloads a list of DNSBLs from [here](https://gist.github.com/cetanu/9697771)
 - Logging
 
 ## How to use this thing
 
 1. Simply download the script
 3. Change the IP and Email settings to whatever is appropriate for your environment
-3. Run the script
+3. Run the script.
 7. Done
 
 ## Contributing
