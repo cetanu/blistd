@@ -1,30 +1,3 @@
-function email_alert($blacklist)
-{	
-	# Message Object Creation
-	$message         = New-Object System.Net.Mail.MailMessage
-	$message.From    = $email_from
-	$message.Subject = $email_subject
-	$message.body    = $email_body
-	$message.To.Add($email_to)
-	
-	# Server Connection Object Creation
-	$smtp = New-Object Net.Mail.SmtpClient($email_server)
-	$smtp.Credentials = New-Object System.Net.NetworkCredential($email_username, $email_password)
-	$smtp.Send($message)
-}
-function log($string, $mode)
-{
-	(date -format "HH:mm:sstt, dd MMM yyyy | ") + $string | Out-file ".\blistd.log" -a -en ASCII
-	switch ($mode)
-	{
-		default   { Write-Output   $string }
-		"warning" { Write-Warning ($string + " Please check your configuration.");  }
-		"error"   { Write-Error   ($string + " Please check your configuration."); exit }
-		"network" { Write-Error   ($string + " Please check your internet connection."); exit }
-	}
-}
-
-
 #
 #   ______   __       __   ______   ______  _____    
 #  /\  == \ /\ \     /\ \ /\  ___\ /\__  _\/\  __-.  
@@ -52,6 +25,34 @@ $email_body     = "Please be advised that $($env:computername)" + "`n" + `
 
 
 # ----- Everything past this point 'should' not be modified. -----
+
+
+
+function email_alert($blacklist)
+{	
+	# Message Object Creation
+	$message         = New-Object System.Net.Mail.MailMessage
+	$message.From    = $email_from
+	$message.Subject = $email_subject
+	$message.body    = $email_body
+	$message.To.Add($email_to)
+	
+	# Server Connection Object Creation
+	$smtp = New-Object Net.Mail.SmtpClient($email_server)
+	$smtp.Credentials = New-Object System.Net.NetworkCredential($email_username, $email_password)
+	$smtp.Send($message)
+}
+function log($string, $mode)
+{
+	(date -format "HH:mm:sstt, dd MMM yyyy | ") + $string | Out-file ".\blistd.log" -a -en ASCII
+	switch ($mode)
+	{
+		default   { Write-Output   $string }
+		"warning" { Write-Warning ($string + " Please check your configuration.");  }
+		"error"   { Write-Error   ($string + " Please check your configuration."); exit }
+		"network" { Write-Error   ($string + " Please check your internet connection."); exit }
+	}
+}
 
 # Check IP address for validity
 $regex = "\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\." + `
