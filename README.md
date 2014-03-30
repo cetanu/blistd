@@ -26,5 +26,5 @@ This is a basic script and it works as it is... but if you want to improve it or
 ## Todo
 
 - Support for multiple IP addresses with different schedules
-- **DONE:** Automatic updates to the list of Blacklists (probably using invoke-webrequest and a public gist)
-- Encrypted password for sending out SMTP
+- **DONE:** Automatic updates to the list of Blacklists
+- **DONE:** Encrypted password for sending out SMTP ( Needs testing )
