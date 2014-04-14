@@ -26,6 +26,7 @@ This is a basic script and it works as it is... but if you want to improve it or
 
 ## Todo
 
-- **DONE:** Support for multiple IP addresses with different schedules
+- **DONE:** Support for multiple IP addresses
 - **DONE:** Automatic updates to the list of Blacklists
 - **DONE:** Encrypted password for sending out SMTP ( Needs testing )
+- Different schedules per IP? Is this even necessary?
