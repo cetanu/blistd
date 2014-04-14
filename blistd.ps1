@@ -9,23 +9,18 @@
 #
 
 # IP Address Settings
-$ipaddress      = "59.167.128.100"  # We are checking this address
+$ipaddress       = @("59.167.128.100", "127.0.0.1")
+$reverse_ip      = @()  # Leave this blank
 
 # Email Settings
-$email_server   = ""
-$email_from     = ""
-$email_to       = ""
-$email_subject  = "$($env:computername) detected on $($blacklist) DNS Blacklist"
-$email_body     = "Please be advised that $($env:computername)" + "`n" + `
-                  "has detected itself on a DNS Blacklist: $($blacklist)" + "`n" + `
-                  "Sincerely," + "`n" + `
-                  "Your mate."
+$email_server    = "emailserver.domain.com"
+$email_from      = "sender@domain.com"
+$email_to        = "recipient@domain.com"
+$email_signature = "Sincerely,`nYourName."
 
 
 
 # ----- Everything past this point 'should' not be modified. -----
-
-
 
 function log($string, $mode)
 {
@@ -40,22 +35,34 @@ function log($string, $mode)
 }
 
 # Email Credentials
-
-$email_user = # This will be automatically filled when you run the script.
-$email_pass = # This will be automatically filled when you run the script.
+$email_user =  # This will be automatically filled when you run the script.
+$email_pass =  # This will be automatically filled when you run the script.
 
 if ($email_pass -eq $null -or $email_user -eq $null)
 {
 	$credentials = credential -message "Please enter your email username and password"
-	if ($credentials -eq $null) {log "No credentials provided." "error"}
+    
+	if ($credentials -eq $null)
+    {
+        log "No credentials provided." "error"
+    }
+    
 	(gc ".\blistd.ps1") `
-		-replace "^.email_user = .*?$",('$email_user = ' + "'" + $credentials.UserName + "'") `
-		-replace "^.email_pass = .*?$",('$email_pass = ' + "'" + ($credentials.Password | ConvertFrom-SecureString) + "'" + " | ConvertTo-SecureString") |
+		-replace "^.email_user =.*?$",('$email_user = ' + "'" + $credentials.UserName + "'") `
+		-replace "^.email_pass =.*?$",('$email_pass = ' + "'" + ($credentials.Password | ConvertFrom-SecureString) + "'" + " | ConvertTo-SecureString") |
 		sc ".\blistd.ps1"
 }
 
-function email_alert($blacklist)
+function email_alert($blacklist, $ip)
 {	
+    # Add Hostname/IP to email body/subject
+    $ip = $ip.split("\."); [array]::Reverse($ip); $ip = $ip -join "."
+    $hostname = [System.Net.DNS]::GetHostByAddress($ip).Hostname
+    $email_subject   = "$($hostname) [$($ip)] detected on $($blacklist) DNS Blacklist"
+    $email_body      = "Please be advised that $($hostname) $($ip)" + "`n" + `
+                       "has detected itself on a DNS Blacklist: $($blacklist)" + "`n" + `
+                       "$($email_signature)"
+
 	# Message Object Creation
 	$message         = New-Object System.Net.Mail.MailMessage
 	$message.From    = $email_from
@@ -64,24 +71,27 @@ function email_alert($blacklist)
 	$message.To.Add($email_to)
 	
 	# Server Connection Object Creation
-	Try
-	{
-		$smtp = New-Object Net.Mail.SmtpClient($email_server, 587)
-		$smtp.EnableSSL = $true
-	}
-	Catch
-	{
-		$smtp = New-Object Net.Mail.SmtpClient($email_server)
-	}
 	$smtp.Credentials = New-Object System.Net.NetworkCredential($email_user,$email_pass)
 	Try
 	{
+    	$smtp = New-Object Net.Mail.SmtpClient($email_server, 587)
+		$smtp.EnableSSL = $true
 		$smtp.Send($message)
 		log "Email alert sent to: $($email_to)"
 	}
 	Catch
 	{
-		log "Failed to send email. $($error[0].Exception)" "error"
+        log "Secure SMTP did not work. Trying regular SMTP" "warning"
+        Try
+        {
+            $smtp = New-Object Net.Mail.SmtpClient($email_server)
+            $smtp.Send($message)
+            log "Email alert sent to: $($email_to)"
+        }
+        Catch
+        {
+            log "Failed to send email. $($error[0].Exception)" "error"
+        }
 	}
 }
 
@@ -91,15 +101,19 @@ $regex = "\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\." + `
            "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\." + `
            "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b"
 
-switch -regex ($ipaddress)
+# Create an array of each reverse address
+ForEach ($ip in $ipaddress)
 {
-	"^(192|172|10)" { log "A valid, public IP address is required for this script to work." "error" }
-	"127\.0\.0\.1"  { log "Your IP address is set to the local loopback address." "warning" }
-	default         { log "Invalid IP specified." "error" }
-	$regex          { continue }
+    switch -regex ($ip)
+    {
+        "^(192|172|10)" { log "A valid, public IP address is required for this script to work." "error" }
+        "127\.0\.0\.1"  { log "Your IP address is set to the local loopback address." "warning" }
+        default         { log "Invalid IP specified." "error" }
+        $regex          { continue }
+    }
+    $ipaddress -match $regex | Out-Null
+    $reverse_ip += @("$($Matches[4]).$($Matches[3]).$($Matches[2]).$($Matches[1])")  # Reverse each capture group
 }
-$ipaddress -match $regex | Out-Null
-$reverse_ip = "$($Matches[4]).$($Matches[3]).$($Matches[2]).$($Matches[1])"  # Reverse each capture group
 
 # Blacklists
 log "Updating DNSBLs..."
@@ -112,31 +126,32 @@ Try
 }
 Catch
 {
-	log "Failed to retrieve DNSBLs." "network"
+    log "Failed to retrieve DNSBLs." "network"
 }
-
-
 
 
 # Begin checking
 $ErrorActionPreference = "SilentlyContinue"  # Ignore errors, we are supposed to get nslookup failures
 While (1)
 {
-	ForEach ($blacklist in $DNSBL)
-	{
-		$check = Start-Job {cmd /c nslookup -type=txt "$($reverse_ip).$($blacklist)"}
-		Wait-Job $check | Out-Null
-		
-		If ((Receive-Job $check) -NotMatch "$($reverse_ip).$($blacklist)")
-		{
-			log "OK -`t$($reverse_ip).$($blacklist)"
-		}
-		Else
-		{
-			log "BLACKLISTED-`t$($reverse_ip).$($blacklist)"
-			email_alert($blacklist)
-		}
-	}
+    ForEach ($ip in $reverse_ip)  # Loop through each IP
+    {
+	    ForEach ($blacklist in $DNSBL)  # Loop through each BL
+	    {
+	    	$check = Start-Job {cmd /c nslookup -type=txt "$($ip).$($blacklist)"}
+	    	Wait-Job $check | Out-Null
+	    	
+	    	If ((Receive-Job $check) -NotMatch "$($ip).$($blacklist)")
+	    	{
+	    		log "OK -`t$($ip).$($blacklist)"
+	    	}
+	    	Else
+	    	{
+	    		log "BLACKLISTED-`t$($ip).$($blacklist)"
+	    		email_alert $blacklist $ip
+	    	}
+	    }
+    }
 	$delay = (Random -min 60 -max 14000)
 	log "Sleeping for $([int]($delay/60)) minutes"
 	sleep $delay  # random delay to avoid looking like a bot
