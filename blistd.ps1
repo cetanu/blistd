@@ -74,24 +74,24 @@ function email_alert($blacklist, $ip)
 	$smtp.Credentials = New-Object System.Net.NetworkCredential($email_user,$email_pass)
 	Try
 	{
-    	$smtp = New-Object Net.Mail.SmtpClient($email_server, 587)
+    		$smtp = New-Object Net.Mail.SmtpClient($email_server, 587)
 		$smtp.EnableSSL = $true
 		$smtp.Send($message)
-		log "Email alert sent to: $($email_to)"
+		log "Email sent to: $($email_to)"
 	}
 	Catch
 	{
-        log "Secure SMTP did not work. Trying regular SMTP" "warning"
-        Try
-        {
-            $smtp = New-Object Net.Mail.SmtpClient($email_server)
-            $smtp.Send($message)
-            log "Email alert sent to: $($email_to)"
-        }
-        Catch
-        {
-            log "Failed to send email. $($error[0].Exception)" "error"
-        }
+        	log "SMTPS failed. Trying regular SMTP" "warning"
+        	Try
+        	{
+            		$smtp = New-Object Net.Mail.SmtpClient($email_server)
+            		$smtp.Send($message)
+            		log "Email sent to: $($email_to)"
+        	}
+        	Catch
+        	{
+            		log "SMTP failed. $($error[0].Exception)" "error"
+        	}
 	}
 }
 
@@ -128,7 +128,7 @@ Try
 	If (! $Choice.ToLower().StartsWith("y"))
 	{
 		# Log the gist link so users can check the contents
-		log "Declined DNSBL download. Please check the public gist: https://gist.github.com/cetanu/9697771";
+		log "Declined DNSBL download. Please check the public gist: https://gist.github.com/cetanu/9697771"
 		exit
 	}
 	
