@@ -119,9 +119,25 @@ ForEach ($ip in $ipaddress)
 log "Updating DNSBLs..."
 Try
 {
-	(Invoke-WebRequest 'https://gist.github.com/cetanu/9697771').content | ?{$_ -match '(?<=View Raw" href=")[^"]*'} | Out-Null
-	$URL = $Matches[0]
-	$DNSBL = ((Invoke-WebRequest $URL).content -split "\n")  # Automatically download a list of DNSBLs from Gist
+	# Tell the user when the gist was last updated
+	(Invoke-WebRequest 'https://gist.github.com/cetanu/9697771/revisions').content |
+	? {$_ -match 'cetanu<\/a> \w+<.*?> this gist.*?>([^<]*)'} | Out-Null
+	
+	# Tell them the latest revision date and give them the choice to continue or exit
+	$Choice = Read-Host "The DNSBL list was last updated $(date $Matches[1]), continue? [y/n]"
+	If (! $Choice.ToLower().StartsWith("y"))
+	{
+		# Log the gist link so users can check the contents
+		log "Declined DNSBL download. Please check the public gist: https://gist.github.com/cetanu/9697771";
+		exit
+	}
+	
+	# Update the DNSBL from my public gist
+	(Invoke-WebRequest 'https://gist.github.com/cetanu/9697771').content |
+	? {$_ -match '(?<=View Raw" href=")[^"]*'} | Out-Null
+	
+	# Automatically download a list of DNSBLs from Gist
+	$DNSBL = ((Invoke-WebRequest $Matches[0]).content -split "\n")  
 	log "Done.`n"
 }
 Catch
