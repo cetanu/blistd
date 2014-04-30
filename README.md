@@ -4,25 +4,27 @@
 
 ## About
 
-This is a Powershell script which checks each DNS Blacklist to see if your IP has been listed.  
+This is a script written in two version, Powershell and Python, which checks each DNS Blacklist to see if your IP has been listed.  
 
 ## Features
 
-- Randomized wait between executions so that we don't look like robots to the DNSBL hosts
-- Email alerting via SMTP (password is stored securely)
 - Automatically downloads a list of DNSBLs from [here](https://gist.github.com/cetanu/9697771)
+- Email alerting via SMTP
 - Logging
+- Randomized wait between executions so that we don't look too much like robots to the DNSBL hosts
 
-## How to use this thing
 
-1. Simply download the script
-3. Change the IP and Email settings to whatever is appropriate for your environment
-3. Run the script.
-7. Done
+## Instructions
+
+1. Download.
+3. Change the IP and Email settings.
+3. Execute.
+7. Done.
 
 ## Contributing
 
-This is a basic script and it works as it is... but if you want to improve it or make it cleaner, feel free.
+Please raise an issue if you would like to make a change.  
+Don't fork if it can be resolved in my code!
 
 ## Todo
 
@@ -30,4 +32,8 @@ This is a basic script and it works as it is... but if you want to improve it or
 - **DONE:** Automatic updates to the list of Blacklists
 - **DONE:** Encrypted password for sending out SMTP ( Needs testing )
 - **DONE:** Added python version for *nix platforms
-- Different schedules per IP? Is this even necessary?
+- Close the gap between Powershell and Python version:
+  - Add secure credential storage for smtp
+  - Ask if the user wants to continue, taking into account the last time the gist was updated
+  - Maybe strip out some unnecessary things from the Powershell version
+- Remove some of the `exit`s and make the script keep running even when it can't do things like email or contact the network, for more consistent logging.

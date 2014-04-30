@@ -5,7 +5,7 @@
 #   \ \_____\\ \_____\\ \_\\/\_____\  \ \_\ \ \____- 
 #    \/_____/ \/_____/ \/_/ \/_____/   \/_/  \/____/ 
 #                                                  
-#          https://github.com/cetanu/blistd
+#          https://github.com/cetanu/blistd/blistd.py
 #
 
 from datetime import datetime as dt
@@ -53,8 +53,8 @@ class Blistd (object):
     def __email_alert__(self, blacklist, ip):
         self.__log__("Sending email alert...")
         # Email settings
-        email_server = "mail.domain.com"
-        email_from = "alerts@domain.com"
+        email_server = "mail.domain.com"  #TODO: add smtp authentication, with secure credential storage
+        email_from = "alerts@domain.com"  #      I will probably get a proper library for this purpose.
         email_to = "support@domain.com"
         email_signature = "Sincerely, Monitoring Server"
         email_subject = "{} detected on {} DNS Blacklist".format(ip, blacklist)

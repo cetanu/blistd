@@ -5,7 +5,7 @@
 #   \ \_____\\ \_____\\ \_\\/\_____\  \ \_\ \ \____- 
 #    \/_____/ \/_____/ \/_/ \/_____/   \/_/  \/____/ 
 #                                                  
-#          https://github.com/cetanu/blistd
+#          https://github.com/cetanu/blistd/blistd.ps1
 #
 
 # IP Address Settings
@@ -34,7 +34,7 @@ function log($string, $mode)
 	}
 }
 
-# Email Credentials
+# Email Credentials. Must be run by the same user everytime, or you won't be able to decrypt the pwd.
 $email_user =  # This will be automatically filled when you run the script.
 $email_pass =  # This will be automatically filled when you run the script.
 
