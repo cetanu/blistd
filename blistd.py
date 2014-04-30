@@ -21,23 +21,15 @@ import re
 
 class Blistd (object):
     def __init__(self, addresses=None):
-        if addresses is None:  # If the user puts nothing, use loopback and notify
-            addresses = '127.0.0.1'
-            self.__log__("No IP provided. Using loopback.")
-        self.blacklists = self.__update__()  # Update DNSBLs from public gist
-        for ip in addresses:
-            ip = self.__reverseip__(ip)
-            for blacklist in self.blacklists:
-                try:  # If lookup is successful, we're blacklisted
-                    socket.gethostbyname("{}.{}".format(ip, blacklist))
-                    self.__log__("{} - BLACKLISTED: {}".format(ip, blacklist))
-                    self.__email_alert__(blacklist, ip)
-                except socket.gaierror:
-                    self.__log__("{} - OK: {}".format(ip, blacklist))
-        # After work is done, rest for a while to appear less robotic
-        sleep = random.randint(300, 14400)
-        self.__log__("Sleeping for {} minutes...".format(sleep/60))
-        time.sleep(sleep)
+        self.DNSBL = self.__update__()  # Update DNSBLs from public gist
+        if addresses is not None:
+            if isinstance(addresses, str):
+                self.check(addresses)
+                self.__sleep__()
+            elif isinstance(addresses, list):
+                for ip in addresses:
+                    self.check(ip)
+                self.__sleep__()
 
     @staticmethod
     def __log__(string):
@@ -50,17 +42,17 @@ class Blistd (object):
         logfile.write(message + "\n")
         logfile.close()
 
-    def __email_alert__(self, blacklist, ip):
+    def __email_alert__(self, ip, bl):
         self.__log__("Sending email alert...")
         # Email settings
         email_server = "mail.domain.com"  #TODO: add smtp authentication, with secure credential storage
         email_from = "alerts@domain.com"  #      I will probably get a proper library for this purpose.
         email_to = "support@domain.com"
         email_signature = "Sincerely, Monitoring Server"
-        email_subject = "{} detected on {} DNS Blacklist".format(ip, blacklist)
+        email_subject = "{} detected on {} DNS Blacklist".format(ip, bl)
         email_body = "Please be advised that {} has detected" \
                      "itself on DNS Blacklist: {}" \
-                     "{}".format(ip, blacklist, email_signature)
+                     "{}".format(ip, bl, email_signature)
         # Construct message
         msg = MIMEText(email_body)
         msg['Subject'] = email_subject
@@ -96,5 +88,24 @@ class Blistd (object):
         for dnsbl in url.readlines():
             dnsbls += [dnsbl.strip("\n")]
         return dnsbls
+        
+    def check(self, ip):
+        forward_ip = ip
+        reverse_ip = self.__reverseip__(ip)
+        for bl in self.DNSBL:
+            try:  # If lookup is successful, we're blacklisted
+                socket.gethostbyname("{}.{}".format(reverse_ip, bl))
+                self.__log__("{} - BLACKLISTED: {}".format(forward_ip, bl))
+                self.__email_alert__(forward_ip, bl)
+            except socket.gaierror:
+                self.__log__("{} - OK: {}".format(forward_ip, bl))
 
-Blistd(['59.167.128.100', '127.0.0.1'])
+    @staticmethod
+    def __sleep__():
+        # After work is done, rest for a while to appear less robotic
+        sleep = random.randint(300, 14400)
+        self.__log__("Sleeping for {} minutes...".format(sleep/60))
+        time.sleep(sleep)
+
+blistd = Blistd()
+blistd.check("74.125.137.27")
