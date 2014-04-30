@@ -29,4 +29,5 @@ This is a basic script and it works as it is... but if you want to improve it or
 - **DONE:** Support for multiple IP addresses
 - **DONE:** Automatic updates to the list of Blacklists
 - **DONE:** Encrypted password for sending out SMTP ( Needs testing )
+- **DONE:** Added python version for *nix platforms
 - Different schedules per IP? Is this even necessary?
