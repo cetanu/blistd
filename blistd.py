@@ -20,92 +20,96 @@ import re
 
 
 class Blistd (object):
-    def __init__(self, addresses=None):
-        self.DNSBL = self.__update__()  # Update DNSBLs from public gist
-        if addresses is not None:
-            if isinstance(addresses, str):
-                self.check(addresses)
-                self.__sleep__()
-            elif isinstance(addresses, list):
-                for ip in addresses:
-                    self.check(ip)
-                self.__sleep__()
+    def __init__(self):
+        self.dnsbl = self._update()
 
-    @staticmethod
-    def __log__(string):
-        print string
-        try:  # If the file doesn't exist, create it
-            logfile = open('blistd.log', 'a')
-        except IOError:
-            logfile = open('blistd.log', 'w+')
-        message = str(dt.now()) + " | " + string
-        logfile.write(message + "\n")
-        logfile.close()
+    def check(self, ip):
+        """ Perform a DNS lookup. If it fails, we're in the clear! """
+        forward_ip = ip
+        reverse_ip = self._reverse_ip(ip)
+        for bl in self.dnsbl:
+            try:
+                socket.gethostbyname("{}.{}".format(reverse_ip, bl))
+                self._log("{} - BLACKLISTED: {}".format(forward_ip, bl))
+                self._alert(forward_ip, bl)
+            except socket.gaierror:
+                self._log("{} - OK: {}".format(forward_ip, bl))
 
-    def __email_alert__(self, ip, bl):
-        self.__log__("Sending email alert...")
-        # Email settings
-        email_server = "mail.domain.com"  #TODO: add smtp authentication, with secure credential storage
-        email_from = "alerts@domain.com"  #      I will probably get a proper library for this purpose.
-        email_to = "support@domain.com"
-        email_signature = "Sincerely, Monitoring Server"
+    def _alert(self, ip, bl):
+        """ Email settings """
+        email_server = "server@email.com"
+        email_from = "from@email.com"
+        email_to = "to@email.com"
+        email_signature = "Sincerely, Monitoring System"
         email_subject = "{} detected on {} DNS Blacklist".format(ip, bl)
-        email_body = "Please be advised that {} has detected" \
-                     "itself on DNS Blacklist: {}" \
-                     "{}".format(ip, bl, email_signature)
-        # Construct message
+        email_body = ''.join(
+            [
+                "Please be advised that {} has detected ".format(ip),
+                "itself on DNS Blacklist: {}\n".format(bl),
+                "{}".format(email_signature)
+            ]
+        )
         msg = MIMEText(email_body)
         msg['Subject'] = email_subject
         msg['From'] = email_from
         msg['To'] = email_to
-        # Send message
         try:
             smtp = smtplib.SMTP(email_server)
             smtp.sendmail(email_from, [email_to], msg.as_string())
             smtp.quit()
+            self._log("Email sent to {}".format(email_to))
         except socket.error:
-            self.__log__("Failed to send email")
+            self._log("Failed to send email using {}".format(email_server))
             #exit() # If you want the program to close when it can't email, uncomment.
 
-    def __reverseip__(self, ip):
-        self.__log__("Reversing {}...".format(ip))
-        regex = r'\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.' \
-                r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.' \
-                r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.' \
-                r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b'
-        match = re.search(regex, ip)
-        return "{}.{}.{}.{}".format(match.group(4), match.group(3), match.group(2), match.group(1))
+    def _reverse_ip(self, ip):
+        """ Reverse IP for use with DNS Lookups.  """
+        self._log("Reversing {}...".format(ip))
+        octet = "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
+        match = re.search(r'\b{0}\.{0}\.{0}\.{0}\b'.format(octet), ip)
+        return "{}.{}.{}.{}".format(
+            match.group(4),
+            match.group(3),
+            match.group(2),
+            match.group(1)
+        )
 
-    def __update__(self):
-        self.__log__("Updating DNSBLs...")
-        match = ''
-        dnsbls = []
+    def _update(self):
+        """ Download a list of DNSBLs from public gist """
+        self._log("Updating DNSBLs...")
         url = urllib2.urlopen('https://gist.github.com/cetanu/9697771')
+        match = ''
         for line in url.readlines():
-            if "View Raw" in line:
-                match = re.search(r'.*View Raw.*?=\"(.*?)\"', line)
-        url = urllib2.urlopen(match.groups()[0])
+            match = re.search(r'=\"(.*?raw.*?)\"', line)
+            if match is not None:
+                break
+        url = urllib2.urlopen("{}{}".format('https://gist.github.com', match.groups()[0]))
+        dnsbls = []
         for dnsbl in url.readlines():
             dnsbls += [dnsbl.strip("\n")]
         return dnsbls
-        
-    def check(self, ip):
-        forward_ip = ip
-        reverse_ip = self.__reverseip__(ip)
-        for bl in self.DNSBL:
-            try:  # If lookup is successful, we're blacklisted
-                socket.gethostbyname("{}.{}".format(reverse_ip, bl))
-                self.__log__("{} - BLACKLISTED: {}".format(forward_ip, bl))
-                self.__email_alert__(forward_ip, bl)
-            except socket.gaierror:
-                self.__log__("{} - OK: {}".format(forward_ip, bl))
 
-    @staticmethod
-    def __sleep__():
-        # After work is done, rest for a while to appear less robotic
+    def sleep(self):
+        """ After work is done, rest for a while to appear less robotic """
         sleep = random.randint(300, 14400)
-        self.__log__("Sleeping for {} minutes...".format(sleep/60))
+        self._log("Sleeping for {} minutes...".format(sleep/60))
         time.sleep(sleep)
 
+    @staticmethod
+    def _log(string):
+        """ Log to console and file with datetime """
+        print string
+        try:
+            logfile = open('blistd.log', 'a')
+        except IOError:
+            logfile = open('blistd.log', 'w+')
+        logfile.write("{} | {}\n".format(str(dt.now()), string))
+        logfile.close()
+
+
 blistd = Blistd()
-blistd.check("74.125.137.27")
+while True:
+    blistd.check("203.102.137.35")
+    blistd.check("203.166.101.145")
+    blistd.check("203.102.137.234")
+    blistd.sleep()

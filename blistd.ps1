@@ -134,7 +134,7 @@ Try
 	
 	# Update the DNSBL from my public gist
 	(Invoke-WebRequest 'https://gist.github.com/cetanu/9697771').content |
-	? {$_ -match '(?<=View Raw" href=")[^"]*'} | Out-Null
+	? {$_ -match '(?<==")(.*?raw[^"]*?)'} | Out-Null
 	
 	# Automatically download a list of DNSBLs from Gist
 	$DNSBL = ((Invoke-WebRequest $Matches[0]).content -split "\n")  
