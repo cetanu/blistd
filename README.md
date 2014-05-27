@@ -4,7 +4,8 @@
 
 ## About
 
-This is a script written in two version, Powershell and Python, which checks each DNS Blacklist to see if your IP has been listed.  
+This is a script written in Python which checks each DNS Blacklist to see if your IP has been listed.  
+
 
 ## Features
 
@@ -21,19 +22,8 @@ This is a script written in two version, Powershell and Python, which checks eac
 3. Execute.
 7. Done.
 
+
 ## Contributing
 
 Please raise an issue if you would like to make a change.  
 Don't fork if it can be resolved in my code!
-
-## Todo
-
-- **DONE:** Support for multiple IP addresses
-- **DONE:** Automatic updates to the list of Blacklists
-- **DONE:** Encrypted password for sending out SMTP ( Needs testing )
-- **DONE:** Added python version for *nix platforms
-- Close the gap between Powershell and Python version:
-  - Add secure credential storage for smtp
-  - Ask if the user wants to continue, taking into account the last time the gist was updated
-  - Maybe strip out some unnecessary things from the Powershell version
-- Remove some of the `exit`s and make the script keep running even when it can't do things like email or contact the network, for more consistent logging.
