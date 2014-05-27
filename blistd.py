@@ -1,7 +1,3 @@
-#
-#          https://github.com/cetanu/blistd/blistd.py
-#
-
 from datetime import datetime as dt
 from email.mime.text import MIMEText
 import smtplib
