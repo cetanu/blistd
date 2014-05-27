@@ -1,12 +1,12 @@
-from datetime import datetime as dt
-from email.mime.text import MIMEText
-import smtplib
-import urllib2
-import socket
-import random
-import time
 import os
 import re
+import time
+import socket
+import random
+import smtplib
+import urllib2
+from datetime import datetime as dt
+from email.mime.text import MIMEText
 
 
 class Blistd (object):
@@ -68,7 +68,7 @@ class Blistd (object):
         gist = urllib2.urlopen("https://gist.github.com{}".format(url))
         dnsbls = list()
         for dnsbl in gist.readlines():
-            dnsbls += [dnsbl.strip("\n")]
+            dnsbls.append([dnsbl.strip("\n")])
         return dnsbls
 
     @staticmethod
@@ -91,23 +91,24 @@ class Blistd (object):
         """ Reverse IP for use with DNS Lookups.  """
         octets = "\.".join(["(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"] * 4)
         match = re.search(r'\b{}\b'.format(octets), ip)
-        return '.'.join([match.group(i) for i in reversed(range(1, 5))])  # 4, 3, 2, 1
+        return '.'.join([match.group(i) for i in reversed(xrange(1, 5))])  # 4, 3, 2, 1
 
 
-blistd = Blistd(
-    {
-        'server': 'mail.domain.com',
-        'to_address': 'operations@domain.com',
-        'from_address': 'alerts@monitoring.com',
-        'signature': 'Sincerely, Monitoring System'
-    }
-)
-servers = [
-    "203.102.137.35",
-    "203.166.101.145",
-    "203.102.137.234"
-]
-while True:
-    for server in servers:
-        blistd.check(server)
-    blistd.sleep()
+if __name__ == '__main__':
+    blistd = Blistd(
+        {
+            'server': 'mail.domain.com',
+            'to_address': 'operations@domain.com',
+            'from_address': 'alerts@monitoring.com',
+            'signature': 'Sincerely, Monitoring System'
+        }
+    )
+    servers = [
+        "203.102.137.35",
+        "203.166.101.145",
+        "203.102.137.234"
+    ]
+    while True:
+        for server in servers:
+            blistd.check(server)
+        blistd.sleep()
