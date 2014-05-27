@@ -22,8 +22,9 @@ class Blistd (object):
             rdns = "{}.{}".format(self._reverse_ip(ip), bl)
             try:
                 socket.gethostbyname(rdns)
-                blacklisted[ip].insert(1, bl)
                 self._log("{} - BLACKLISTED: {}".format(ip, bl))
+                # Collect a list of blacklists before emailing
+                blacklisted[ip].insert(1, bl)
             except socket.gaierror:
                 print "{} - OK: {}".format(ip, bl)
         if blacklisted[ip] is not None:
@@ -72,7 +73,6 @@ class Blistd (object):
 
     @staticmethod
     def _findgist():
-        """ Find the raw gist on github for easier processing of dnsbls """
         url = urllib2.urlopen('https://gist.github.com/cetanu/9697771')
         for line in url.readlines():
             match = re.search(r'=\"(.*?raw.*?)\"', line)
@@ -91,7 +91,7 @@ class Blistd (object):
         """ Reverse IP for use with DNS Lookups.  """
         octets = "\.".join(["(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"] * 4)
         match = re.search(r'\b{}\b'.format(octets), ip)
-        return '.'.join([match.group(i) for i in reversed(range(1, 5))])
+        return '.'.join([match.group(i) for i in reversed(range(1, 5))])  # 4, 3, 2, 1
 
 
 blistd = Blistd(
