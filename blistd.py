@@ -4,11 +4,7 @@ import time
 import socket
 import random
 import smtplib
-<<<<<<< HEAD
 from urllib import request
-=======
-import urllib2
->>>>>>> 7fc22b71aa98fb5a34db95e6e363bc7ff0dbebb6
 from datetime import datetime as dt
 from email.mime.text import MIMEText
 
@@ -75,31 +71,11 @@ class Blistd (object):
         except socket.error:
             self._log("{} - EMAIL FAILED".format(ip))
 
-<<<<<<< HEAD
     def sleep(self):
         """ After work is done, rest for a while to avoid getting b& """
         sleep = random.randint(300, 14400)
         self._log("Sleeping for {} minutes...".format(sleep/60))
         time.sleep(sleep)
-=======
-    def _update(self):
-        """ Download a list of DNSBLs from public gist """
-        print "Updating DNSBLs"
-        url = self._findgist()
-        gist = urllib2.urlopen("https://gist.github.com{}".format(url))
-        dnsbls = list()
-        for dnsbl in gist.readlines():
-            dnsbls.append([dnsbl.strip("\n")])
-        return dnsbls
-
-    @staticmethod
-    def _findgist():
-        url = urllib2.urlopen('https://gist.github.com/cetanu/9697771')
-        for line in url.readlines():
-            match = re.search(r'=\"(.*?raw.*?)\"', line)
-            if match is not None:
-                return match.groups()[0]
->>>>>>> 7fc22b71aa98fb5a34db95e6e363bc7ff0dbebb6
 
     @staticmethod
     def _log(string):
@@ -113,7 +89,7 @@ class Blistd (object):
         """ Reverse IP for use with DNS Lookups. """
         octets = "\.".join(["(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"] * 4)
         match = re.search(r'\b{}\b'.format(octets), ip)
-        return '.'.join([match.group(i) for i in reversed(xrange(1, 5))])  # 4, 3, 2, 1
+        return '.'.join([match.group(i) for i in reversed(range(1, 5))])  # 4, 3, 2, 1
 
 
 if __name__ == '__main__':
