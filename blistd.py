@@ -19,7 +19,7 @@ class Blistd (object):
         print("Updating DNSBLs")
         url = self._findgist()
         gist = request.urlopen("https://gist.github.com{}".format(url))
-        dnsbls = [dnsbl.decode("utf-8").rstrip("\n") for dnsbl in gist]
+        dnsbls = (dnsbl.decode("utf-8").rstrip("\n") for dnsbl in gist)
         return dnsbls
 
     @staticmethod
@@ -32,19 +32,18 @@ class Blistd (object):
 
     def check(self, ip):
         """ Perform a DNS lookup. If it fails, we're in the clear! """
-        blacklisted = dict()
-        blacklisted[ip] = list()
+        blacklisted = list()
         for bl in self.dnsbl:
             rdns = "{}.{}".format(self._reverse_ip(ip), bl)
             try:
                 socket.gethostbyname(rdns)
                 self._log("{} - BLACKLISTED: {}".format(ip, bl))
                 # Collect a list of blacklists before emailing
-                blacklisted[ip].insert(1, bl)
+                blacklisted.append(bl)
             except socket.gaierror:
                 print("{} - OK: {}".format(ip, bl))
-        if blacklisted[ip] is not None:
-            self._alert(ip, blacklisted[ip])
+        if len(blacklisted):
+            self._alert(ip, blacklisted)
 
     def _alert(self, ip, bl):
         """ Email alerting """
