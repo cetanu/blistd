@@ -5,6 +5,24 @@ import random
 import smtplib
 from email.mime.text import MIMEText
 
+# ---------------------------------------------------------
+# 
+#                      Settings!
+#
+servers_to_check = {
+    '203.102.137.35',
+    '203.166.101.145',
+    '203.102.137.234'
+}
+email = {
+    'server': 'backupemailserver.domain.com',
+    'to_address': 'operations@domain.com',
+    'from_address': 'alerts@monitoring.com',
+    'signature': 'Sincerely, Monitoring System'
+}
+
+# ---------------------------------------------------------
+
 dnsbls = '''
 b.barracudacentral.org
 bl.deadbeef.com
@@ -114,18 +132,7 @@ def alert(ip, bl):
 
 
 if __name__ == '__main__':
-    email = {
-        'server': 'backupemailserver.domain.com',
-        'to_address': 'operations@domain.com',
-        'from_address': 'alerts@monitoring.com',
-        'signature': 'Sincerely, Monitoring System'
-    }
-    servers = {
-        '203.102.137.35',
-        '203.166.101.145',
-        '203.102.137.234'
-    }
-    for server in servers:
+    for server in servers_to_check:
         flagged_lists = set()
         for blacklist in dnsbls:
             rdns = '{}.{}'.format(ip2rdns(server), blacklist)
