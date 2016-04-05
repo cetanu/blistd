@@ -1,3 +1,9 @@
+# :fire: banishd :fire:
+
+A cut-down version of blistd (below)
+
+Does everything the same, but doesn't download a gist every time you run it.
+
 # blistd <sup>DNS Blacklist Lookup</sup>
 
 ---
